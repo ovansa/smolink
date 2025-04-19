@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"log"
 	"net/http"
 	"smolink/internal/service"
 
@@ -19,7 +18,7 @@ func NewURLController(service *service.URLService) *URLController {
 func (uc *URLController) ShortenURL(c *gin.Context) {
 	var payload struct {
 		URL        string `json:"url"`
-		CustomCode string `json:"custom_code"`
+		CustomCode string `json:"customCode"`
 	}
 
 	if err := c.ShouldBindJSON(&payload); err != nil {
@@ -41,10 +40,7 @@ func (uc *URLController) ResolveURL(c *gin.Context) {
 	ip := c.ClientIP()
 	ua := c.Request.UserAgent()
 
-	log.Printf("Resolving URL for code: %s, IP: %s, User-Agent: %s", code, ip, ua)
-
 	original, err := uc.service.ResolveURL(c, code, ip, ua)
-	log.Printf("Original URL: %s", original)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Short URL not found"})
 		return

@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log"
 	"net/url"
 	"smolink/internal/model"
 	"smolink/internal/repository"
@@ -20,28 +22,56 @@ func NewURLService(repo *repository.PostgresRepository, cache *repository.RedisR
 }
 
 func (s *URLService) ShortenURL(ctx context.Context, originalURL, customCode string) (*model.URL, error) {
-	_, err := url.ParseRequestURI(originalURL)
-	if err != nil {
+	// 1. Validate URL
+	if _, err := url.ParseRequestURI(originalURL); err != nil {
 		return nil, errors.New("invalid URL")
 	}
 
-	shortCode := customCode
-	if shortCode == "" {
-		shortCode = utils.GenerateShortCode(6)
+	// 2. Handle custom code or generate new one
+	var shortCode string
+	var err error
+
+	if customCode != "" {
+		// Check if custom code already exists
+		if existingURL, _ := s.repo.GetURL(ctx, customCode); existingURL != nil {
+			return nil, errors.New("custom code already in use")
+		}
+		shortCode = customCode
+	} else {
+		// Generate secure random code with retry logic
+		for i := 0; i < 3; i++ { // Try 3 times to generate unique code
+			shortCode, err = utils.GenerateShortCodeSecure(6)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate short code: %w", err)
+			}
+
+			// Verify uniqueness
+			if existingURL, _ := s.repo.GetURL(ctx, shortCode); existingURL == nil {
+				break
+			}
+		}
 	}
 
+	// 3. Create URL record
 	urlModel := &model.URL{
 		ShortCode:   shortCode,
 		OriginalURL: originalURL,
 		CreatedAt:   time.Now(),
 	}
 
-	err = s.repo.CreateURL(ctx, urlModel)
-	if err != nil {
-		return nil, err
+	if err := s.repo.CreateURL(ctx, urlModel); err != nil {
+		return nil, fmt.Errorf("failed to create URL: %w", err)
 	}
 
-	_ = s.cache.SetURL(ctx, shortCode, originalURL, 24*time.Hour)
+	// 4. Update cache (log failure but don't fail operation)
+	if err := s.cache.SetURL(ctx, shortCode, originalURL, 24*time.Hour); err != nil {
+		// s.logger.Error("failed to cache URL",
+		// 	"error", err,
+		// 	"short_code", shortCode,
+		// 	"original_url", originalURL,
+		// )
+		log.Printf("failed to cache URL: %v", err)
+	}
 
 	return urlModel, nil
 }
