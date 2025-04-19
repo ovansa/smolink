@@ -3,11 +3,11 @@ package model
 import "time"
 
 type URL struct {
-	ID          int    `json:"id"`
-	ShortCode   string `json:"short_code"`
-	OriginalURL string `json:"original_url"`
-	ClickCount  int    `json:"click_count"`
-	CreatedAt   string `json:"created_at"`
+	ID          int       `json:"id"`
+	ShortCode   string    `json:"short_code"`
+	OriginalURL string    `json:"original_url"`
+	ClickCount  int       `json:"click_count"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type URLAnalytics struct {
