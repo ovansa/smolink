@@ -15,6 +15,10 @@ func NewPostgresRepository(db *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{db: db}
 }
 
+func (r *PostgresRepository) DB() *pgxpool.Pool {
+	return r.db
+}
+
 func (r *PostgresRepository) CreateURL(ctx context.Context, url *model.URL) error {
 	_, err := r.db.Exec(ctx, "INSERT INTO urls (short_code, original_url) VALUES ($1, $2)", url.ShortCode, url.OriginalURL)
 	return err

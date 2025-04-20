@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 type RedisRepository struct {
@@ -13,6 +13,10 @@ type RedisRepository struct {
 
 func NewRedisRepository(client *redis.Client) *RedisRepository {
 	return &RedisRepository{client: client}
+}
+
+func (r *RedisRepository) Client() *redis.Client {
+	return r.client
 }
 
 func (r *RedisRepository) GetURL(ctx context.Context, shortCode string) (string, error) {
