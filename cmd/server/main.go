@@ -61,6 +61,24 @@ func main() {
 	router.POST("/shorten", urlController.ShortenURL)
 	router.GET("/:code", urlController.ResolveURL)
 
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Ah, you don reach home. Welcome to the smolink service. We dey for you!",
+		})
+	})
+
+	router.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "Omo, this route no dey exist o! You don miss road. Go back jare!",
+		})
+	})
+
+	router.NoMethod(func(c *gin.Context) {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{
+			"message": "Abeg, no try that method here. Na wrong move!",
+		})
+	})
+
 	// Start the server
 	server := &http.Server{
 		Addr:    cfg.ServerPort,

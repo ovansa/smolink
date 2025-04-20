@@ -49,7 +49,7 @@ func LoadConfig() (*Config, error) {
 
 	config := &Config{
 		Environment:     getEnv("ENVIRONMENT", "development"),
-		ServerPort:      port, // Render uses PORT
+		ServerPort:      port,
 		PostgresDSN:     getEnv("POSTGRES_DSN", ""),
 		RedisAddr:       getEnv("REDIS_ADDR", "localhost:6379"),
 		RedisPassword:   getEnv("REDIS_PASSWORD", ""),
