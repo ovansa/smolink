@@ -21,8 +21,8 @@ func LoadConfig() (*Config, error) {
 	viper.SetConfigFile(".env")
 	viper.AutomaticEnv()
 
-	viper.SetDefault("ENVIRONMENT", "development")
-	viper.SetDefault("SERVER_PORT", ":8080")
+	viper.SetDefault("ENVIRONMENT", "production")
+	// viper.SetDefault("SERVER_PORT", ":8080")
 	viper.SetDefault("REDIS_ADDR", "localhost:6379")
 	viper.SetDefault("REDIS_DB", 0)
 
