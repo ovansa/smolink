@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -26,10 +27,24 @@ func NewPostgresDB(dsn string) (*PostgresDB, error) {
 		return nil, fmt.Errorf("failed to ping PostgreSQL: %w", err)
 	}
 
-	log.Println("✅ Successfully connected to PostgreSQL")
+	log.Printf("✅ Successfully connected to PostgreSQL at %s", sanitizeDSN(dsn))
 	return &PostgresDB{Pool: pool}, nil
 }
 
 func (db *PostgresDB) Close() {
 	db.Pool.Close()
+}
+
+func sanitizeDSN(dsn string) string {
+	parsed, err := url.Parse(dsn)
+	if err != nil {
+		return "unknown DSN (failed to parse)"
+	}
+
+	if parsed.User != nil {
+		username := parsed.User.Username()
+		parsed.User = url.UserPassword(username, "****")
+	}
+
+	return parsed.Redacted()
 }

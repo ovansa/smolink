@@ -2,8 +2,10 @@ package config
 
 import (
 	"errors"
+	"os"
+	"strconv"
 
-	"github.com/spf13/viper"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -18,31 +20,38 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	viper.SetConfigFile(".env")
-	viper.AutomaticEnv()
+	_ = godotenv.Load()
 
-	viper.SetDefault("ENVIRONMENT", "production")
-	// viper.SetDefault("SERVER_PORT", ":8080")
-	viper.SetDefault("REDIS_ADDR", "localhost:6379")
-	viper.SetDefault("REDIS_DB", 0)
-
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, err
+	// Helper function to get env vars with fallback
+	getEnv := func(key, fallback string) string {
+		if value, exists := os.LookupEnv(key); exists {
+			return value
 		}
+		return fallback
+	}
+
+	// Helper to get integer env vars
+	getEnvInt := func(key string, fallback int) int {
+		if value, exists := os.LookupEnv(key); exists {
+			if intValue, err := strconv.Atoi(value); err == nil {
+				return intValue
+			}
+		}
+		return fallback
 	}
 
 	config := &Config{
-		Environment:     viper.GetString("ENVIRONMENT"),
-		ServerPort:      viper.GetString("SERVER_PORT"),
-		PostgresDSN:     viper.GetString("POSTGRES_DSN"),
-		RedisAddr:       viper.GetString("REDIS_ADDR"),
-		RedisPassword:   viper.GetString("REDIS_PASSWORD"),
-		RedisDB:         viper.GetInt("REDIS_DB"),
-		WebhookEndpoint: viper.GetString("WEBHOOK_ENDPOINT"),
-		ClickThreshold:  viper.GetInt("CLICK_THRESHOLD"),
+		Environment:     getEnv("ENVIRONMENT", "development"),
+		ServerPort:      getEnv("PORT", getEnv("SERVER_PORT", ":8080")), // Render uses PORT
+		PostgresDSN:     getEnv("POSTGRES_DSN", ""),
+		RedisAddr:       getEnv("REDIS_ADDR", "localhost:6379"),
+		RedisPassword:   getEnv("REDIS_PASSWORD", ""),
+		RedisDB:         getEnvInt("REDIS_DB", 0),
+		WebhookEndpoint: getEnv("WEBHOOK_ENDPOINT", ""),
+		ClickThreshold:  getEnvInt("CLICK_THRESHOLD", 10), // Default 10 clicks
 	}
 
+	// Validate required configuration
 	if config.PostgresDSN == "" {
 		return nil, errors.New("POSTGRES_DSN is required")
 	}

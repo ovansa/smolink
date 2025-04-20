@@ -15,13 +15,12 @@ type RedisDB struct {
 	Client *redis.Client
 }
 
-// NewRedisDB creates a new Redis client. Accepts either:
-// 1. Direct connection parameters (addr, password, db)
-// 2. Redis URL format (redis://user:password@host:port/db)
+// NewRedisDB creates a new Redis client with secure connection handling
 func NewRedisDB(connection string, password string, db int) (*RedisDB, error) {
 	var client *redis.Client
+	var safeConn string
 
-	// If connection string is a Redis URL
+	// Parse and sanitize connection details for logging
 	if strings.HasPrefix(connection, "redis://") {
 		parsedURL, err := url.Parse(connection)
 		if err != nil {
@@ -30,20 +29,26 @@ func NewRedisDB(connection string, password string, db int) (*RedisDB, error) {
 
 		// Extract password from URL if not explicitly provided
 		if password == "" {
-			var hasPassword bool
-			password, hasPassword = parsedURL.User.Password()
-			if !hasPassword {
-				password = "" // If no password in URL
+			password, _ = parsedURL.User.Password()
+		}
+
+		// Create sanitized version for logging
+		safeURL := *parsedURL
+		if safeURL.User != nil {
+			if _, hasPassword := safeURL.User.Password(); hasPassword {
+				safeURL.User = url.User(safeURL.User.Username())
 			}
 		}
+		safeConn = safeURL.String()
 
 		client = redis.NewClient(&redis.Options{
 			Addr:     parsedURL.Host,
 			Password: password,
-			DB:       db, // Default to 0 if not specified in URL
+			DB:       db,
 		})
 	} else {
-		// Standard connection parameters
+		// For direct host:port connections
+		safeConn = connection
 		client = redis.NewClient(&redis.Options{
 			Addr:     connection,
 			Password: password,
@@ -59,13 +64,22 @@ func NewRedisDB(connection string, password string, db int) (*RedisDB, error) {
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
-	log.Println("✅ Successfully connected to Redis")
+	// Secure logging
+	log.Printf("✅ Redis connection established | Addr: %s | DB: %d | Pool: %d",
+		safeConn,
+		db,
+		client.Options().PoolSize,
+	)
+
 	return &RedisDB{Client: client}, nil
 }
 
 func (r *RedisDB) Close() error {
 	if r.Client != nil {
-		return r.Client.Close()
+		if err := r.Client.Close(); err != nil {
+			return fmt.Errorf("error closing Redis connection: %w", err)
+		}
+		log.Print("Redis connection closed")
 	}
 	return nil
 }
