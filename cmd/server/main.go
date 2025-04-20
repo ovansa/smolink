@@ -22,7 +22,9 @@ import (
 func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Failed to load config:", err)
+		if cfg.Environment != "production" {
+			log.Fatal("Failed to load config:", err)
+		}
 	}
 
 	// Set Gin mode based on config
