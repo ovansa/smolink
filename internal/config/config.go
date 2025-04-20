@@ -2,8 +2,10 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -40,9 +42,14 @@ func LoadConfig() (*Config, error) {
 		return fallback
 	}
 
+	port := getEnv("PORT", getEnv("SERVER_PORT", "8080"))
+	if !strings.HasPrefix(port, ":") {
+		port = ":" + port
+	}
+
 	config := &Config{
 		Environment:     getEnv("ENVIRONMENT", "development"),
-		ServerPort:      getEnv("PORT", getEnv("SERVER_PORT", ":8080")), // Render uses PORT
+		ServerPort:      port, // Render uses PORT
 		PostgresDSN:     getEnv("POSTGRES_DSN", ""),
 		RedisAddr:       getEnv("REDIS_ADDR", "localhost:6379"),
 		RedisPassword:   getEnv("REDIS_PASSWORD", ""),
@@ -54,6 +61,10 @@ func LoadConfig() (*Config, error) {
 	// Validate required configuration
 	if config.PostgresDSN == "" {
 		return nil, errors.New("POSTGRES_DSN is required")
+	}
+
+	if !strings.HasPrefix(config.ServerPort, ":") {
+		return nil, fmt.Errorf("invalid SERVER_PORT: must begin with ':' (got %s)", config.ServerPort)
 	}
 
 	return config, nil
