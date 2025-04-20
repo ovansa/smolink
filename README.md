@@ -140,8 +140,3 @@ go vet ./...
 This project includes GitHub Actions to automatically run tests on each push and PR.
 
 ---
-
-## 📃 License
-
-MIT © 2025 Smolink Devs
-```
