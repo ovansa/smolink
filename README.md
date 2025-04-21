@@ -110,15 +110,21 @@ go run cmd/main.go
 
 | Method | Endpoint       | Description             |
 |--------|----------------|-------------------------|
-| POST   | `/shorten`     | Shorten a URL           |
-| GET    | `/:short_code` | Redirect to full URL    |
+| POST   | `/links`       | Shorten a URL           |
+| GET    | `/:code`       | Redirect to full URL    |
 
 ### Sample Request (POST `/shorten`)
 
 ```json
 {
   "url": "https://example.com",
-  "customAlias": "my-custom-code"
+  "customCode": "my-custom-code"
+}
+```
+
+```json
+{
+  "url": "https://example.com"
 }
 ```
 
