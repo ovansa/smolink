@@ -1,11 +1,10 @@
 package integration
 
 import (
-	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
-	"net/http/httptest"
+	"smolink/internal/errors"
+	"smolink/internal/routes"
 	"smolink/test"
 	"testing"
 
@@ -29,59 +28,80 @@ func (suite *URLControllerTestSuite) SetupTest() {
 	suite.app.ResetState()
 }
 
-func (suite *URLControllerTestSuite) TestShortenURL_Success() {
-	payload := map[string]string{"url": "https://example.com"}
-	body, _ := json.Marshal(payload)
+const shortenURLEndpoint = routes.APIPrefix + routes.ShortenURLPath
 
-	req := httptest.NewRequest("POST", "/shorten", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
+func (suite *URLControllerTestSuite) TestShortenURLWithoutCustomCode_Success() {
+	originalURL := "https://golang.org"
+	payload := map[string]string{"url": originalURL}
 
-	suite.app.Router.ServeHTTP(w, req)
+	w := test.CreateTestRequest(suite.T(), suite.app.Router, http.MethodPost, shortenURLEndpoint, payload, "")
 
-	suite.Equal(http.StatusOK, w.Code)
+	suite.Equal(http.StatusCreated, w.Code)
 
 	var resp map[string]string
-	err := json.NewDecoder(w.Body).Decode(&resp)
-	suite.NoError(err)
-	suite.Equal("https://example.com", resp["original_url"])
+	test.ParseResponse(suite.T(), w, &resp)
+	suite.Equal(originalURL, resp["original_url"])
 	suite.NotEmpty(resp["short_code"])
 }
 
-func (suite *URLControllerTestSuite) TestResolveURL_Success() {
-	// Shorten first
-	payload := map[string]string{"url": "https://golang.org"}
-	body, _ := json.Marshal(payload)
+func (suite *URLControllerTestSuite) TestShortenURLWithCustomCode_Success() {
+	shortCode, originalURL := "golang", "https://golang.org"
+	payload := map[string]string{"url": originalURL, "customCode": shortCode}
+	w := test.CreateTestRequest(suite.T(), suite.app.Router, http.MethodPost, shortenURLEndpoint, payload, "")
 
-	req := httptest.NewRequest("POST", "/shorten", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	suite.app.Router.ServeHTTP(w, req)
+	suite.Equal(http.StatusCreated, w.Code)
 
 	var resp map[string]string
-	_ = json.NewDecoder(w.Body).Decode(&resp)
+	test.ParseResponse(suite.T(), w, &resp)
+	suite.Equal(originalURL, resp["original_url"])
+	suite.Equal(shortCode, resp["short_code"])
+}
 
-	// Resolve
-	code := resp["short_code"]
-	req = httptest.NewRequest("GET", "/"+code, nil)
-	req.Header.Set("User-Agent", "Go-Test")
-	w = httptest.NewRecorder()
-	suite.app.Router.ServeHTTP(w, req)
+func (suite *URLControllerTestSuite) TestShortenURLWithExistingCustomCode_Failure() {
+	shortCode, originalURL := "golang", "https://golang.org"
+	err := suite.app.SeedShortURL(shortCode, originalURL)
+	suite.Require().NoError(err)
 
-	suite.Equal(http.StatusFound, w.Code)
-	suite.Equal("https://golang.org", w.Header().Get("Location"))
+	payload := map[string]string{"url": "https://example.com", "customCode": shortCode}
+	w := test.CreateTestRequest(suite.T(), suite.app.Router, http.MethodPost, shortenURLEndpoint, payload, "")
+
+	suite.Equal(http.StatusConflict, w.Code)
+
+	var resp map[string]string
+	test.ParseResponse(suite.T(), w, &resp)
+	suite.Equal(errors.ErrCodeInUse.Code, resp["code"])
+	suite.Equal(errors.ErrCodeInUse.Message, resp["message"])
 }
 
 func (suite *URLControllerTestSuite) TestShortenURL_InvalidPayload() {
-	req := httptest.NewRequest("POST", "/shorten", bytes.NewBufferString(`invalid json`))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	suite.app.Router.ServeHTTP(w, req)
+	w := test.CreateTestRequest(suite.T(), suite.app.Router, http.MethodPost, shortenURLEndpoint, nil, "")
 	suite.Equal(http.StatusBadRequest, w.Code)
 
 	body, _ := io.ReadAll(w.Body)
 	suite.Contains(string(body), "Invalid request payload")
+}
+
+func (suite *URLControllerTestSuite) TestResolveURL_Success() {
+	shortCode, originalURL := "golang", "https://golang.org"
+	err := suite.app.SeedShortURL(shortCode, originalURL)
+	suite.Require().NoError(err)
+
+	code := shortCode
+	w := test.CreateTestRequest(suite.T(), suite.app.Router, http.MethodGet, shortenURLEndpoint+"/"+code, nil, "")
+
+	suite.Equal(http.StatusFound, w.Code)
+	suite.Equal(originalURL, w.Header().Get("Location"))
+}
+
+func (suite *URLControllerTestSuite) TestResolveURL_ShortCodeDoesNotExist_Fail() {
+	code := "shortCodeThatDoesNotExist"
+	w := test.CreateTestRequest(suite.T(), suite.app.Router, http.MethodGet, shortenURLEndpoint+"/"+code, nil, "")
+
+	suite.Equal(http.StatusNotFound, w.Code)
+	var resp map[string]string
+	test.ParseResponse(suite.T(), w, &resp)
+	suite.Equal(errors.ErrShortCodeNotFound.Code, resp["code"])
+	suite.Equal(errors.ErrShortCodeNotFound.Message, resp["message"])
 }
 
 func TestURLControllerTestSuite(t *testing.T) {

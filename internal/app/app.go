@@ -6,9 +6,9 @@ import (
 	"smolink/internal/config"
 	"smolink/internal/controller"
 	"smolink/internal/repository"
+	"smolink/internal/routes"
 	"smolink/internal/service"
 	"smolink/pkg/database"
-	"smolink/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,10 +39,8 @@ func NewApp(cfg *config.Config, includeRootRoutes bool) (*App, error) {
 	urlController := controller.NewURLController(urlService)
 
 	router := gin.New()
-	router.Use(gin.Recovery(), logger.Middleware())
 
-	router.POST("/shorten", urlController.ShortenURL)
-	router.GET("/:code", urlController.ResolveURL)
+	routes.SetupRoutes(router, urlController)
 
 	if includeRootRoutes {
 		router.GET("/", func(c *gin.Context) {

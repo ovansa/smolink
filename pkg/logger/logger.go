@@ -8,9 +8,11 @@ import (
 )
 
 func Middleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
+	return func(ctx *gin.Context) {
 		start := time.Now()
-		c.Next()
-		log.Printf("[%s] %s - %d (%s)", c.Request.Method, c.Request.URL.Path, c.Writer.Status(), time.Since(start))
+		ctx.Next()
+		duration := time.Since(start)
+		log.Printf("Request - Method: %s | Status: %d | Path: %s | Duration: %v",
+			ctx.Request.Method, ctx.Writer.Status(), ctx.Request.URL.Path, duration)
 	}
 }
