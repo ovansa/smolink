@@ -73,6 +73,20 @@ func (suite *URLControllerTestSuite) TestShortenURLWithExistingCustomCode_Failur
 	suite.Equal(errors.ErrCodeInUse.Message, resp["message"])
 }
 
+func (suite *URLControllerTestSuite) TestShortenURLWithInvalidURL_Failure() {
+	shortCode, originalURL := "newShortCode", "{{randomURL}}"
+
+	payload := map[string]string{"url": originalURL, "customCode": shortCode}
+	w := test.CreateTestRequest(suite.T(), suite.app.Router, http.MethodPost, shortenURLEndpoint, payload, "")
+
+	suite.Equal(http.StatusBadRequest, w.Code)
+
+	var resp map[string]string
+	test.ParseResponse(suite.T(), w, &resp)
+	suite.Equal(errors.ErrInvalidURL.Code, resp["code"])
+	suite.Equal(errors.ErrInvalidURL.Message, resp["message"])
+}
+
 func (suite *URLControllerTestSuite) TestShortenURL_InvalidPayload() {
 	w := test.CreateTestRequest(suite.T(), suite.app.Router, http.MethodPost, shortenURLEndpoint, nil, "")
 	suite.Equal(http.StatusBadRequest, w.Code)
