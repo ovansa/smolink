@@ -34,7 +34,7 @@ func (uc *URLController) ShortenURL(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"short_code": result.ShortCode, "original_url": result.OriginalURL})
+	c.JSON(http.StatusCreated, gin.H{"shortCode": result.ShortCode, "originalUrl": result.OriginalURL})
 }
 
 func (uc *URLController) ResolveURL(c *gin.Context) {

@@ -40,8 +40,8 @@ func (suite *URLControllerTestSuite) TestShortenURLWithoutCustomCode_Success() {
 
 	var resp map[string]string
 	test.ParseResponse(suite.T(), w, &resp)
-	suite.Equal(originalURL, resp["original_url"])
-	suite.NotEmpty(resp["short_code"])
+	suite.Equal(originalURL, resp["originalUrl"])
+	suite.NotEmpty(resp["shortCode"])
 }
 
 func (suite *URLControllerTestSuite) TestShortenURLWithCustomCode_Success() {
@@ -53,8 +53,8 @@ func (suite *URLControllerTestSuite) TestShortenURLWithCustomCode_Success() {
 
 	var resp map[string]string
 	test.ParseResponse(suite.T(), w, &resp)
-	suite.Equal(originalURL, resp["original_url"])
-	suite.Equal(shortCode, resp["short_code"])
+	suite.Equal(originalURL, resp["originalUrl"])
+	suite.Equal(shortCode, resp["shortCode"])
 }
 
 func (suite *URLControllerTestSuite) TestShortenURLWithExistingCustomCode_Failure() {
